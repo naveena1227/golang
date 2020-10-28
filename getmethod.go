@@ -1,44 +1,82 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
+	"math/rand"
 	"net/http"
+	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
-func FromData(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.Error(w, "naveena", http.StatusNotFound)
-		return
-	}
+// @Component{
+// 	templateUrl: "./index.html"
+// }
 
-	switch r.Method {
-	case "GET":
-		http.ServeFile(w, r, "template/index.html")
+type BIO struct {
+	NAME   string `jason:"name"`
+	AGE    string `jason:"age"`
+	GENDER string `jason:"gender"`
+	PHONE  string `jason:"number"`
+}
 
-	case "POST":
-		var nav = r.ParseForm()
-		if nav != nil {
-			fmt.Fprintln(w, "naveena1", nav)
+var bio []BIO
+
+func getbio(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(bio)
+	//http.ServeFile(w, r, "template/index.html")
+}
+
+func getdata(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r) //get param
+	//loops throgh book and find id
+	for _, item := range bio {
+		if item.NAME == params["name"] {
+			json.NewEncoder(w).Encode(item)
 			return
 		}
-		var name = r.FormValue("name")
-		var age = r.FormValue("age")
-		var gender = r.FormValue("gender")
-		var place = r.FormValue("place")
-
-		fmt.Fprintln(w, "name =", name)
-		fmt.Fprintln(w, "age =", age)
-		fmt.Fprintln(w, "gender =", gender)
-		fmt.Fprintln(w, "place =", place)
-
-	default:
-		fmt.Fprintln(w, "naveena", "22", "female", "andhrapradesh")
-
 	}
-}
-func main() {
-	http.HandleFunc("/", FromData)
+	json.NewEncoder(w).Encode(bio)
 
-	fmt.Println("Server is running on port 8080....")
-	http.ListenAndServe(":8080", nil)
+}
+
+func createBio(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var Bio BIO
+	_ = json.NewDecoder(r.Body).Decode(&Bio)
+	Bio.NAME = strconv.Itoa(rand.Intn(1000))
+	bio = append(bio, Bio)
+	json.NewEncoder(w).Encode(Bio)
+}
+
+// delete bio
+func deletedata(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	for index, item := range bio {
+		if item.NAME == params["name"] {
+			bio = append(bio[:index], bio[index+1:]...)
+			break
+		}
+	}
+	json.NewEncoder(w).Encode(bio)
+}
+
+func main() {
+
+	//init router
+	r := mux.NewRouter()
+
+	//Mock data - implement data base
+	bio = append(bio, BIO{NAME: "naveena", AGE: "22", GENDER: "female", PHONE: "123456"})
+	bio = append(bio, BIO{NAME: "babu", AGE: "24", GENDER: "male", PHONE: "147852"})
+	//route handlers / endpoints
+	r.HandleFunc("/api/bio", getbio).Methods("GET")
+	r.HandleFunc("/api/bio/{name}", getdata).Methods("GET")
+	r.HandleFunc("/api/bio", createBio).Methods("POST")
+	r.HandleFunc("/api/bio/{name}", deletedata).Methods("DELETE")
+	log.Fatal(http.ListenAndServe(":8001", r))
 }
