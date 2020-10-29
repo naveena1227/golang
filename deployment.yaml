@@ -1,0 +1,27 @@
+  
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deep-tek-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deep-tek-app
+  template:
+    metadata:
+      labels:
+        app: deep-tek-app
+    spec:
+      containers:
+      - name: deep-tek-app
+        image: deep-tek-image:1.0
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - mountPath: /tmp
+          name: test-vol
+      volumes:
+      - name: test-vol
+        hostPath:
+          path: /test-vol
